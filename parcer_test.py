@@ -4,7 +4,7 @@ import logging
 import time
 
 
-CATALOG_ID_EXCEPTION = [2192, 130255, 61037, 4853, 12, 13, 14]
+CATALOG_ID_EXCEPTION = [2192, 130255, 61037, 4853, 12, 13, 14, 128297, 128313, 128604]
 HEADERS = {'Accept': "*/*", 'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
 
 
@@ -25,15 +25,17 @@ def get_data_from_wb(url):
     return response
 
 
-def get_child_catalog_wb(catalogs, catalogs_list):
+def get_child_catalog_wb(catalogs, catalogs_list, full_name=''):
     for catalog in catalogs:
+        parent_name = full_name
         childs = catalog.get('childs')
         if childs and catalog['id'] not in CATALOG_ID_EXCEPTION:
-            catalogs_list = get_child_catalog_wb(childs, catalogs_list)
+            parent_name = parent_name + ' > ' + catalog['name']
+            catalogs_list = get_child_catalog_wb(childs, catalogs_list, parent_name)
         elif catalog['id'] not in CATALOG_ID_EXCEPTION:
             catalogs_list.append({
                 'id': catalog['id'], 
-                'name': catalog['name'],
+                'name': parent_name + ' > ' + catalog['name'],
                 'parent': catalog['parent'],
                 'shard': catalog.get('shard'),
                 'query': catalog.get('query')
@@ -58,7 +60,6 @@ def get_catalog_wb():
 def get_content(shard, query, low_price=0, top_price=0):
     data_list = []
     for page in range(1, 101):
-        print(f'Сбор позиций со страницы {page} из 100')
         url = f'https://catalog.wb.ru/catalog/{shard}/catalog?appType=1&curr=rub&dest=-1075831,-77677,-398551,12358499' \
               f'&locale=ru&page={page}&price={low_price * 100};{top_price * 100}' \
               f'®=0®ions=64,83,4,38,80,33,70,82,86,30,69,1,48,22,66,31,40&sort=popular&spp=0&{query}'
@@ -103,15 +104,18 @@ if __name__ == '__main__':
     handler.setFormatter(formatter) 
     logger.addHandler(handler)
 
-    catalogs = get_catalog_wb()
-
+    catalogs= get_catalog_wb()
+    catalog_count = 0
     if catalogs:
         with open('wb_catalogs_data.json', 'w', encoding='UTF-8') as file:
             json.dump(catalogs, file, indent=2, ensure_ascii=False)
         for catalog in catalogs:
+            catalog_count += 1
             name = catalog['name']
-            logger.info(f'Загрузка товаров из каталога: {name}')
-            print(f'Загрузка товаров из каталога: {name}')
+            logger.info(f'Загрузка товаров из каталога № {catalog_count} всего - '
+                        f'{len(catalogs)} имя: {name}')
+            print(f'Загрузка товаров из каталога № {catalog_count} всего - '
+                  f'{len(catalogs)} имя: {name}')
             result = get_content(catalog['shard'], catalog['query'])
             with open('wb_goods_data.json', 'a', encoding='UTF-8') as file:
                 json.dump(result, file, indent=2, ensure_ascii=False)
