@@ -57,11 +57,11 @@ def get_catalog_wb():
     return catalogs_list
 
 
-def get_content(shard, query, low_price=0, top_price=0):
+def get_goods_wb(shard, query, low_price=1000, top_price=1200):
     data_list = []
     for page in range(1, 101):
         url = f'https://catalog.wb.ru/catalog/{shard}/catalog?appType=1&curr=rub&dest=-1075831,-77677,-398551,12358499' \
-              f'&locale=ru&page={page}&price={low_price * 100};{top_price * 100}' \
+              f'&locale=ru&page={page}&priceU={low_price * 100};{top_price * 100}&' \
               f'®=0®ions=64,83,4,38,80,33,70,82,86,30,69,1,48,22,66,31,40&sort=popular&spp=0&{query}'
         response = get_data_from_wb(url)
         if not response:
@@ -73,13 +73,13 @@ def get_content(shard, query, low_price=0, top_price=0):
         if not products:
             logger.info(f'Сбор данных завершен на странице {page - 1}')
             break
-        data_list.extend(get_data_from_json(products))
+        data_list.extend(get_goods_from_json(products))
 
     logger.info(f'Собрана информация по {len(data_list)} позиций')
     return data_list
 
 
-def get_data_from_json(products):
+def get_goods_from_json(products):
     data_list = []
     for item in products:
         item_id = item['id']
@@ -116,7 +116,7 @@ if __name__ == '__main__':
                         f'{len(catalogs)} имя: {name}')
             print(f'Загрузка товаров из каталога № {catalog_count} всего - '
                   f'{len(catalogs)} имя: {name}')
-            result = get_content(catalog['shard'], catalog['query'])
+            result = get_goods_wb(catalog['shard'], catalog['query'])
             with open('wb_goods_data.json', 'a', encoding='UTF-8') as file:
                 json.dump(result, file, indent=2, ensure_ascii=False)
                 logger.info(f'Данные каталога {name} сохранены')
